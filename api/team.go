@@ -32,6 +32,7 @@ func InitTeam() {
 	BaseRoutes.Teams.Handle("/get_invite_info", ApiAppHandler(getInviteInfo)).Methods("POST")
 	BaseRoutes.Teams.Handle("/find_team_by_name", ApiAppHandler(findTeamByName)).Methods("POST")
 	BaseRoutes.Teams.Handle("/members", ApiUserRequired(getMyTeamMembers)).Methods("GET")
+	BaseRoutes.Teams.Handle("/unread", ApiUserRequired(getMyTeamMembersUnread)).Methods("GET")
 
 	BaseRoutes.NeedTeam.Handle("/me", ApiUserRequired(getMyTeam)).Methods("GET")
 	BaseRoutes.NeedTeam.Handle("/stats", ApiUserRequired(getTeamStats)).Methods("GET")
@@ -708,8 +709,18 @@ func getMyTeamMembers(c *Context, w http.ResponseWriter, r *http.Request) {
 		c.Err = result.Err
 		return
 	} else {
-		data := result.Data.([]*model.TeamMemberExtra)
-		w.Write([]byte(model.TeamMembersExtraToJson(data)))
+		data := result.Data.([]*model.TeamMember)
+		w.Write([]byte(model.TeamMembersToJson(data)))
+	}
+}
+
+func getMyTeamMembersUnread(c *Context, w http.ResponseWriter, r *http.Request) {
+	if result := <-Srv.Store.Team().GetTeamsUnreadForUser(c.Session.UserId); result.Err != nil {
+		c.Err = result.Err
+		return
+	} else {
+		data := result.Data.([]*model.TeamMemberUnread)
+		w.Write([]byte(model.TeamMembersUnreadToJson(data)))
 	}
 }
 
@@ -826,10 +837,10 @@ func updateMemberRoles(c *Context, w http.ResponseWriter, r *http.Request) {
 		c.Err = result.Err
 		return
 	} else {
-		members := result.Data.([]*model.TeamMemberExtra)
+		members := result.Data.([]*model.TeamMember)
 		for _, m := range members {
 			if m.TeamId == teamId {
-				member = &m.TeamMember
+				member = m
 			}
 		}
 	}
